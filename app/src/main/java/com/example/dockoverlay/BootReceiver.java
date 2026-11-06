@@ -15,7 +15,7 @@ public class BootReceiver extends BroadcastReceiver {
             AdbClient adb = new AdbClient();
             if (adb.connect(p.adbHost(), p.adbPort())) SystemBarGuard.restore(c, p, adb);
         }
-        c.startService(new Intent(c, DockOverlayService.class)
+        c.startForegroundService(new Intent(c, DockOverlayService.class)
             .setAction(DockOverlayService.ACTION_REFRESH));
     }
 }

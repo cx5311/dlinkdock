@@ -3,7 +3,7 @@
     android:id="@+id/dock_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#00000000">
+    android:background="#E6F7F7F7">
     <!-- 参考迪友桌面：RecyclerView 用 wrap_content + 水平居中，项增减后自动重排并居中 -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/dock_recycler"

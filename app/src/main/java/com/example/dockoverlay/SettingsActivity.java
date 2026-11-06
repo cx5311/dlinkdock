@@ -4,7 +4,7 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Color;
+import android.content.res.Configuration;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -15,11 +15,13 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.Switch;
 import android.widget.TextView;
 import java.util.List;
 
-/** App 唯一主页面：设置主页（素排版）。第 19 项「设置」即跳转到此。 */
+/** App 唯一主页面：设置主页（素排版，支持深浅模式）。第 19 项「设置」即跳转到此。 */
 public class SettingsActivity extends android.app.Activity {
     private static final String PKG = "com.example.dockoverlay";
 
@@ -38,22 +40,32 @@ public class SettingsActivity extends android.app.Activity {
     private final AdbClient adb = new AdbClient();
     private TextView adbStatus;
     private TextView backupStatus;
+    private boolean dark;
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
+        prefs = new DockPrefs(this);
+        dark = ThemeHelper.isDark(this, prefs);
+        getWindow().getDecorView().setBackgroundColor(ThemeHelper.windowBackground(dark));
         setContentView(R.layout.activity_settings);
         root = findViewById(R.id.settings_root);
-        prefs = new DockPrefs(this);
         build();
     }
     @Override protected void onResume() {
         super.onResume();
+        if (ThemeHelper.isDark(this, prefs) != dark) { recreate(); return; }
+        ensureDockService();     // 权限齐备时确保底栏运行
         updateAdbStatus();
         updateBackupStatus();
     }
+    @Override public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        // 「跟随系统」时系统切换深浅，立即重建设置页刷新配色
+        if (ThemeHelper.isDark(this, prefs) != dark) recreate();
+    }
     private void section(String title) {
         TextView t = new TextView(this);
-        t.setText(title); t.setTextSize(16); t.setTextColor(Color.BLACK);
+        t.setText(title); t.setTextSize(16); t.setTextColor(ThemeHelper.titleColor(dark));
         t.setPadding(0, 24, 0, 8);
         root.addView(t);
     }
@@ -72,8 +84,10 @@ public class SettingsActivity extends android.app.Activity {
         LinearLayout txt = new LinearLayout(this);
         txt.setOrientation(LinearLayout.VERTICAL);
         txt.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        TextView a = new TextView(this); a.setText(title); a.setTextSize(15); a.setTextColor(Color.BLACK);
-        TextView d = new TextView(this); d.setText(desc); d.setTextSize(11); d.setTextColor(Color.GRAY);
+        TextView a = new TextView(this); a.setText(title); a.setTextSize(15);
+        a.setTextColor(ThemeHelper.titleColor(dark));
+        TextView d = new TextView(this); d.setText(desc); d.setTextSize(11);
+        d.setTextColor(ThemeHelper.descColor(dark));
         txt.addView(a); txt.addView(d);
         Switch s = new Switch(this); s.setChecked(checked); s.setOnCheckedChangeListener(listener);
         l.addView(txt); l.addView(s);
@@ -82,6 +96,7 @@ public class SettingsActivity extends android.app.Activity {
     }
     private Button addButton(String text, View.OnClickListener l) {
         Button b = new Button(this); b.setText(text); b.setAllCaps(false);
+        b.setTextColor(ThemeHelper.titleColor(dark));
         b.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT));
         b.setOnClickListener(l);
@@ -89,7 +104,8 @@ public class SettingsActivity extends android.app.Activity {
         return b;
     }
     private TextView addText(String s) {
-        TextView t = new TextView(this); t.setText(s); t.setTextSize(12); t.setTextColor(Color.DKGRAY);
+        TextView t = new TextView(this); t.setText(s); t.setTextSize(12);
+        t.setTextColor(ThemeHelper.descColor(dark));
         t.setPadding(0, 6, 0, 6);
         root.addView(t);
         return t;
@@ -100,6 +116,8 @@ public class SettingsActivity extends android.app.Activity {
         final EditText host = new EditText(this);
         host.setText(prefs.adbHost() + ":" + prefs.adbPort());
         host.setInputType(InputType.TYPE_CLASS_TEXT);
+        host.setTextColor(ThemeHelper.titleColor(dark));
+        host.setHintTextColor(ThemeHelper.descColor(dark));
         host.setHint("无线 ADB 地址，默认 localhost:5555");
         root.addView(host);
         addButton("连接无线 ADB 并授权", v -> {
@@ -130,6 +148,26 @@ public class SettingsActivity extends android.app.Activity {
         });
         addText("注意：enabled_accessibility_services 原值若非空，须把本服务追加在原值后（用 : 分隔），切勿覆盖车机原有无障碍服务。");
 
+        section("外观模式");
+        RadioGroup rg = new RadioGroup(this);
+        rg.setOrientation(RadioGroup.HORIZONTAL);
+        String[] labels = {"跟随系统", "浅色", "深色"};
+        for (int i = 0; i < labels.length; i++) {
+            RadioButton rb = new RadioButton(this);
+            rb.setId(i + 1);
+            rb.setText(labels[i]);
+            rb.setTextColor(ThemeHelper.titleColor(dark));
+            rg.addView(rb);
+        }
+        rg.check(prefs.themeMode() + 1);
+        root.addView(rg);
+        rg.setOnCheckedChangeListener((group, checkedId) -> {
+            prefs.setThemeMode(checkedId - 1);
+            notifyDockRefresh();
+            recreate();
+        });
+        addText("「跟随系统」时，车机切换深浅模式，底栏与设置页会自动同步换色换图标。");
+
         section("2  导航栏显示");
         addSwitch("隐藏原厂导航栏", "通过 ADB 下发 policy_control；改动前自动备份原值",
             prefs.isHideSystemNav(), (btn, on) -> {
@@ -144,7 +182,6 @@ public class SettingsActivity extends android.app.Activity {
                     doRestore();
                 }
             });
-        // 独立一键恢复：与开关状态无关，随时可点
         addButton("【一键恢复原厂导航栏】", v -> doRestore());
         backupStatus = addText("");
         addText("PC 端兜底命令：" + SystemBarGuard.fallbackCommand());
@@ -153,7 +190,7 @@ public class SettingsActivity extends android.app.Activity {
         addSwitch("锁定导航栏布局", "开启=禁止拖动防误触；关闭=编辑模式，长按图标左右拖动排序",
             prefs.isLockDock(), (btn, on) -> {
                 prefs.setLockDock(on);
-                startService(new Intent(this, DockOverlayService.class)
+                startForegroundService(new Intent(this, DockOverlayService.class)
                     .setAction(DockOverlayService.ACTION_EDIT).putExtra("edit", !on));
             });
         List<DockItem> all = prefs.loadAll();
@@ -163,14 +200,12 @@ public class SettingsActivity extends android.app.Activity {
                 List<DockItem> list = prefs.loadAll();
                 for (DockItem x : list) if (x.id.equals(it.id)) x.enabled = on;
                 prefs.saveAll(list);
-                startService(new Intent(this, DockOverlayService.class)
-                    .setAction(DockOverlayService.ACTION_REFRESH));
+                notifyDockRefresh();
             });
         }
         addButton("恢复默认项与顺序", v -> {
             prefs.resetItems();
-            startService(new Intent(this, DockOverlayService.class)
-                .setAction(DockOverlayService.ACTION_REFRESH));
+            notifyDockRefresh();
             recreate();
         });
 
@@ -181,7 +216,19 @@ public class SettingsActivity extends android.app.Activity {
         section("5  高级");
         addSwitch("开机自启", "BOOT_COMPLETED / QUICKBOOT_POWERON", true, (btn, on) -> { });
         addText("车型：宋 PLUS DMi 2021 款　控制器：13.6　DiLink 3.0");
-        addText("版本 0.1.1（S09 前置修复：ADB 状态诚实化 / 权限页降级 / PC 授权通道）");
+        addText("版本 0.1.2（迪友桌面图标 / 深浅模式 / 前台服务）");
+    }
+
+    /** 通知底栏刷新（项增减、深浅切换、旋转屏后重算）。 */
+    private void notifyDockRefresh() {
+        startForegroundService(new Intent(this, DockOverlayService.class)
+            .setAction(DockOverlayService.ACTION_REFRESH));
+    }
+
+    /** 0.1.2：权限齐备时确保底栏服务运行，修复「首次打开 App 只显示设置页、底栏不出现」。 */
+    private void ensureDockService() {
+        if (!Settings.canDrawOverlays(this)) return;
+        notifyDockRefresh();
     }
 
     /** 悬浮窗权限页：必须带 package: URI，且车机定制 ROM 可能没有该页面，需降级。 */
@@ -221,8 +268,13 @@ public class SettingsActivity extends android.app.Activity {
             s = sb.toString();
         }
         if (!adb.canExec()) {
-            s += "\n说明：无线 ADB 端口已连通，但 App 内授权通道（ADB 协议握手 + RSA 认证）尚未接入（S09）；"
-               + "端口连通 ≠ 已授权，本按钮暂不会下发任何命令。请先用上方 PC 端命令一次性授权。";
+            if (r.allGranted) {
+                s += "\n权限已由 PC 端 adb 一次性授予并持久生效，无需再连电脑。"
+                   + "App 内自动授权通道（ADB 协议握手）尚未接入（S09），该按钮暂只检测端口连通。";
+            } else {
+                s += "\n说明：无线 ADB 端口可能已连通，但 App 内授权通道（ADB 协议握手 + RSA 认证）尚未接入（S09）；"
+                   + "端口连通 ≠ 已授权，本按钮暂不会下发任何命令。请先用上方 PC 端命令一次性授权。";
+            }
         }
         if (adbStatus != null) adbStatus.setText(s);
     }

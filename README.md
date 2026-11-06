@@ -17,6 +17,9 @@ D:/dev/gradle-home/wrapper/dists/gradle-8.14-all/8mguqc37c200i71ledpgw8n5m/gradl
 - 悬浮栏精确 LayoutParams + 常态 NOT_TOUCHABLE 点击穿透 / 编辑态可交互
 - 无线 ADB 连接按钮 + 7 项权限校验 + 「已获得全部权限」提示
 - **完整恢复原厂导航栏**：改动前备份原值、独立一键恢复按钮、恢复后读回复核、开机自检兜底
+- **0.1.2**：底栏改为前台服务（`startForegroundService` + 常驻通知），设置页 `onResume` 自动拉起，解决首次打开只显示设置页、底栏不出现；`PermissionChecker` 与「App 内 ADB 通道」解耦
+- **0.1.2 UI**：底栏改用迪友桌面 `drawable/nav_common_*` 系列线性 vector 图标（`_b_icon` 深色图标 / `_w_icon` 白色图标，共 28 个，自包含、无外部资源依赖），浅色横条 + 紧凑图标，不再显示文字占位；图标资源取自车机上迪友桌面 APK 的 `apktool_out/res/drawable`（自用研究）
+- **0.1.2 深浅模式**：设置页「外观模式」三选一（跟随系统 / 浅色 / 深色）。跟随系统时通过 `Configuration.uiMode & UI_MODE_NIGHT_MASK` 判定，设置页 `onResume` / `onConfigurationChanged` 重建配色，悬浮底栏 `Service.onConfigurationChanged` 即时换背景与图标；默认跟随系统
 
 ## 完整恢复（重要）
 - 设置页常驻「一键恢复原厂导航栏」按钮，与隐藏开关状态无关，随时可点。
