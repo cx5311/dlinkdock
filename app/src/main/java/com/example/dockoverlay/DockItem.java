@@ -5,6 +5,7 @@ public class DockItem {
     public static final int TYPE_SPACE_BIG = 1;    // 30dp，参考 nav_free_item_big_space
     public static final int TYPE_SPACE_SMALL = 2;  // 15dp
     public static final int TYPE_SPLIT_LINE = 3;   // 10dp 竖线
+    public static final int TYPE_TEMPERATURE = 4;  // 温度数字（参考迪友 tv_nav_ac_*_temperature_text）
 
     public final String id;
     public final String label;

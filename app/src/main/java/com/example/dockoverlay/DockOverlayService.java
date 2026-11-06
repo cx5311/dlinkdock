@@ -19,6 +19,7 @@ import android.view.WindowManager;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import java.util.ArrayList;
 import java.util.List;
 
 /** 悬浮底栏：参数来自 S05 实测（y4/c、y4/f、a5/d）。0.1.2 起为前台服务，适配 Android 10 后台限制。 */
@@ -86,10 +87,11 @@ public class DockOverlayService extends Service {
         dockView = LayoutInflater.from(this).inflate(R.layout.dock_bar, null);
         RecyclerView rv = dockView.findViewById(R.id.dock_recycler);
         rv.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
-        List<DockItem> list = prefs.visibleItems();
+        List<DockItem> list = buildDisplayList(prefs.visibleItems());
         lastBarHeight = prefs.barHeightDp();
         adapter = new DockAdapter(list, this::onItemClick,
             getResources().getDisplayMetrics().density, lastBarHeight);
+        adapter.setTemperatures(leftTemp, rightTemp);
         boolean dark = ThemeHelper.isDark(this, prefs);
         adapter.setDark(dark);
         rv.setAdapter(adapter);
@@ -98,6 +100,22 @@ public class DockOverlayService extends Service {
         WindowManager.LayoutParams p = buildLp(false);
         wm.addView(dockView, p);
         Log.d(TAG, "addView OK: items=" + list.size() + " h=" + p.height + " y=" + p.y);
+    }
+
+    /**
+     * 参考迪友桌面 navigation_bar_default_view.xml 的顺序：
+     * 温度− → 温度数字 TextView → 温度＋。温度项仅用于显示，不进设置页的 17 项开关列表。
+     */
+    private List<DockItem> buildDisplayList(List<DockItem> visible) {
+        List<DockItem> out = new ArrayList<>();
+        for (DockItem it : visible) {
+            if ("left_temp_up".equals(it.id))
+                out.add(new DockItem("_temp_left", "左温度", DockItem.TYPE_TEMPERATURE, true, -1));
+            if ("right_temp_up".equals(it.id))
+                out.add(new DockItem("_temp_right", "右温度", DockItem.TYPE_TEMPERATURE, true, -1));
+            out.add(it);
+        }
+        return out;
     }
 
     private WindowManager.LayoutParams buildLp(boolean edit) {
@@ -143,7 +161,11 @@ public class DockOverlayService extends Service {
         }
         boolean dark = ThemeHelper.isDark(this, prefs);
         dockView.setBackgroundColor(ThemeHelper.barBackground(dark));
-        if (adapter != null) { adapter.setDark(dark); adapter.notifyDataSetChanged(); }
+        if (adapter != null) {
+            adapter.setDark(dark);
+            adapter.setTemperatures(leftTemp, rightTemp);
+            adapter.notifyDataSetChanged();
+        }
         wm.updateViewLayout(dockView, buildLp(editMode));   // 旋转屏 / 深浅切换后重算 y
     }
 
@@ -185,16 +207,23 @@ public class DockOverlayService extends Service {
         if (!ok) toast(label + "执行失败");
     }
 
-    /** 空调面板：优先比亚迪空调应用，其次车机设置，都没有则给出明确提示。 */
+    /**
+     * 空调面板：照搬迪友桌面 c5/c.java 的 j() —— 显式 ComponentName
+     * com.byd.airconditioning/.mainactivity.FullScreenMainActivity，
+     * FLAG_ACTIVITY_NEW_TASK + 无转场动画。迪友桌面没有「退回车机设置」的 fallback。
+     */
     private void openAcPanel() {
-        android.content.pm.PackageManager pm = getPackageManager();
-        Intent i = pm.getLaunchIntentForPackage("com.byd.airconditioning");
-        if (i == null) i = pm.getLaunchIntentForPackage("com.byd.carsettings");
-        if (i != null) {
-            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            try { startActivity(i); } catch (Exception e) { toast("空调面板拉起失败：" + e.getMessage()); }
-        } else {
-            toast("空调开关／面板（未找到车机空调应用，S09 接 BYDAutoAcDevice）");
+        try {
+            Intent i = new Intent();
+            i.setComponent(new android.content.ComponentName(
+                "com.byd.airconditioning",
+                "com.byd.airconditioning.mainactivity.FullScreenMainActivity"));
+            i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NO_ANIMATION);
+            startActivity(i);
+            Log.d(TAG, "openAcPanel: BYD FullScreenMainActivity");
+        } catch (Exception e) {
+            Log.w(TAG, "openAcPanel failed: " + e.getMessage());
+            toast("空调面板拉起失败：" + e.getMessage());
         }
     }
 
@@ -214,6 +243,10 @@ public class DockOverlayService extends Service {
             case "left_seat":       leftSeat = (leftSeat + 1) % 4; msg = "主驾座椅 " + leftSeat + " 档"; break;
             case "right_seat":      rightSeat = (rightSeat + 1) % 4; msg = "副驾座椅 " + rightSeat + " 档"; break;
             default:                msg = it.label + "（车控接入待 S09）"; break;
+        }
+        if (adapter != null) {
+            adapter.setTemperatures(leftTemp, rightTemp);
+            adapter.notifyDataSetChanged();   // 温度数字随 ± 立即刷新
         }
         toast(msg);
     }

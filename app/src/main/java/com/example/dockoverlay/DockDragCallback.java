@@ -20,6 +20,9 @@ public class DockDragCallback extends ItemTouchHelper.SimpleCallback {
             @NonNull RecyclerView.ViewHolder src, @NonNull RecyclerView.ViewHolder dst) {
         int from = src.getAdapterPosition(), to = dst.getAdapterPosition();
         if (from < 0 || to < 0 || from >= adapter.items().size() || to >= adapter.items().size()) return false;
+        // 温度数字是布局元素（参考迪友固定 TextView），不参与拖拽
+        if (adapter.items().get(from).type == DockItem.TYPE_TEMPERATURE
+                || adapter.items().get(to).type == DockItem.TYPE_TEMPERATURE) return false;
         Collections.swap(adapter.items(), from, to);
         adapter.notifyItemMoved(from, to);
         return true;

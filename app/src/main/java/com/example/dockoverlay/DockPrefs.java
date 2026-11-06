@@ -38,8 +38,8 @@ public final class DockPrefs {
     public void setThemeMode(int v) { sp.edit().putInt(K_THEME, v).apply(); }
     public int barHeightDp() { return sp.getInt(K_BAR_HEIGHT, 48); }   // 默认 48dp（迪友 30dp 等比放大 1.6x）
     public void setBarHeightDp(int v) { sp.edit().putInt(K_BAR_HEIGHT, v).apply(); }
-    /** 默认上移一栏，避开原厂导航栏的输入窗口（实测其会吃掉贴底触摸）。 */
-    public int barOffsetDp() { return sp.getInt(K_BAR_OFFSET, barHeightDp()); }
+    /** 默认贴底（用户已自行隐藏原厂导航栏）；若点击被原厂栏输入窗口吃掉，可在设置页开启上移避让。 */
+    public int barOffsetDp() { return sp.getInt(K_BAR_OFFSET, 0); }
     public void setBarOffsetDp(int v) { sp.edit().putInt(K_BAR_OFFSET, v).apply(); }
 
     public List<DockItem> visibleItems() {

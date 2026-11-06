@@ -7,11 +7,13 @@ public final class DockOrderHelper {
     private DockOrderHelper() {}
     public static void applyVisibleOrder(DockPrefs prefs, List<DockItem> visible) {
         List<DockItem> all = prefs.loadAll();
-        for (int i = 0; i < visible.size(); i++) {
-            DockItem v = visible.get(i);
+        int order = 0;
+        for (DockItem v : visible) {
+            if (v.id.startsWith("_")) continue;   // 温度数字等布局元素不参与持久化
             for (DockItem a : all) {
-                if (a.id.equals(v.id)) { a.order = i; a.enabled = true; break; }
+                if (a.id.equals(v.id)) { a.order = order; a.enabled = true; break; }
             }
+            order++;
         }
         for (DockItem a : all) {
             boolean in = false;
