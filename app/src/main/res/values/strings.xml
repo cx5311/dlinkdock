@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">底栏设置</string>
+    <string name="dock_settings">打开底栏设置</string>
+    <string name="acc_desc">底栏按键与保活服务</string>
+</resources>

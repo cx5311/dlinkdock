@@ -1,0 +1,19 @@
+# Gradle / 编译产物（不上传）
+.gradle/
+build/
+app/build/
+*.apk
+*.aab
+
+# 本机环境（含 SDK 绝对路径）
+local.properties
+.idea/
+*.iml
+.DS_Store
+
+# 绝不上传反编译产物、原 APK、密钥
+*.jks
+*.keystore
+*.pem
+decompiled/
+reverse/

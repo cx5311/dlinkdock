@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/dock_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#00000000">
+    <!-- 参考迪友桌面：RecyclerView 用 wrap_content + 水平居中，项增减后自动重排并居中 -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/dock_recycler"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_gravity="center_horizontal"
+        android:orientation="horizontal" />
+</FrameLayout>

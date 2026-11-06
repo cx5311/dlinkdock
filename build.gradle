@@ -1,0 +1,8 @@
+// 离线构建：用传统 buildscript + classpath，绕开 plugins{} DSL 的 plugin marker 解析
+buildscript {
+    repositories { google(); mavenCentral() }
+    dependencies { classpath 'com.android.tools.build:gradle:8.13.1' }
+}
+allprojects {
+    repositories { google(); mavenCentral() }
+}
