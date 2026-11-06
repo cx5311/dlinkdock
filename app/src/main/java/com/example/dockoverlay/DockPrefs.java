@@ -16,6 +16,7 @@ public final class DockPrefs {
     public static final String K_ADB_PORT = "adb_port";
     public static final String K_THEME = "theme_mode";   // 0 跟随系统 / 1 浅色 / 2 深色
     public static final String K_BAR_HEIGHT = "bar_height_dp";   // 40 / 48 / 56
+    public static final String K_BAR_OFFSET = "bar_offset_dp";   // 0=贴底 / 栏高=上移避让原厂栏
     // 完整恢复：改动前的系统原值，持久化保存
     public static final String K_BACK_POLICY_EXISTED = "bak_policy_existed";
     public static final String K_BACK_POLICY_VALUE = "bak_policy_value";
@@ -37,6 +38,9 @@ public final class DockPrefs {
     public void setThemeMode(int v) { sp.edit().putInt(K_THEME, v).apply(); }
     public int barHeightDp() { return sp.getInt(K_BAR_HEIGHT, 48); }   // 默认 48dp（迪友 30dp 等比放大 1.6x）
     public void setBarHeightDp(int v) { sp.edit().putInt(K_BAR_HEIGHT, v).apply(); }
+    /** 默认上移一栏，避开原厂导航栏的输入窗口（实测其会吃掉贴底触摸）。 */
+    public int barOffsetDp() { return sp.getInt(K_BAR_OFFSET, barHeightDp()); }
+    public void setBarOffsetDp(int v) { sp.edit().putInt(K_BAR_OFFSET, v).apply(); }
 
     public List<DockItem> visibleItems() {
         List<DockItem> all = loadAll();

@@ -110,7 +110,9 @@ public class DockOverlayService extends Service {
         wm.getDefaultDisplay().getRealMetrics(dm);
         int h = (int) (prefs.barHeightDp() * getResources().getDisplayMetrics().density);
         p.height = h;                                                      // 默认 48dp，可调 40/48/56
-        p.y = dm.heightPixels - h;
+        // 上移避让原厂导航栏的输入窗口（实测 NavigationBar0 会吃掉贴底触摸）
+        p.y = dm.heightPixels - h
+            - (int)(prefs.barOffsetDp() * getResources().getDisplayMetrics().density);
         int f = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
               | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
               | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN

@@ -188,6 +188,12 @@ public class SettingsActivity extends android.app.Activity {
             notifyDockRefresh();
         });
         addText("按迪友桌面比例（图标 1:1、占栏高 0.8）整体放大，并拉开图标间隔；切换后底栏立即重建。");
+        addSwitch("避开原厂导航栏（底栏上移）",
+            "车机原厂导航栏的输入窗口会吃掉贴底触摸；上移一栏后按钮可直接点击。彻底隐藏原厂栏后可关闭此项恢复贴底",
+            prefs.barOffsetDp() > 0, (btn, on) -> {
+                prefs.setBarOffsetDp(on ? prefs.barHeightDp() : 0);
+                notifyDockRefresh();
+            });
 
         section("2  导航栏显示");
         addSwitch("隐藏原厂导航栏", "通过 ADB 下发 policy_control；改动前自动备份原值",
