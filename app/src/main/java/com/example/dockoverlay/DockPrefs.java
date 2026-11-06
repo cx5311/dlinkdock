@@ -15,6 +15,7 @@ public final class DockPrefs {
     public static final String K_ADB_HOST = "adb_host";
     public static final String K_ADB_PORT = "adb_port";
     public static final String K_THEME = "theme_mode";   // 0 跟随系统 / 1 浅色 / 2 深色
+    public static final String K_BAR_HEIGHT = "bar_height_dp";   // 40 / 48 / 56
     // 完整恢复：改动前的系统原值，持久化保存
     public static final String K_BACK_POLICY_EXISTED = "bak_policy_existed";
     public static final String K_BACK_POLICY_VALUE = "bak_policy_value";
@@ -34,6 +35,8 @@ public final class DockPrefs {
     public void setAdb(String h, int p) { sp.edit().putString(K_ADB_HOST, h).putInt(K_ADB_PORT, p).apply(); }
     public int themeMode() { return sp.getInt(K_THEME, ThemeHelper.FOLLOW); }
     public void setThemeMode(int v) { sp.edit().putInt(K_THEME, v).apply(); }
+    public int barHeightDp() { return sp.getInt(K_BAR_HEIGHT, 48); }   // 默认 48dp（迪友 30dp 等比放大 1.6x）
+    public void setBarHeightDp(int v) { sp.edit().putInt(K_BAR_HEIGHT, v).apply(); }
 
     public List<DockItem> visibleItems() {
         List<DockItem> all = loadAll();

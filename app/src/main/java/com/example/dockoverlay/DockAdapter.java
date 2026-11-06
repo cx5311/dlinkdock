@@ -17,9 +17,11 @@ public class DockAdapter extends RecyclerView.Adapter<DockAdapter.VH> {
     private final OnClick click;
     private final float density;
     private boolean dark = false;
+    private final int barHeightDp;
 
-    public DockAdapter(List<DockItem> items, OnClick click, float density) {
+    public DockAdapter(List<DockItem> items, OnClick click, float density, int barHeightDp) {
         this.items = items; this.click = click; this.density = density;
+        this.barHeightDp = barHeightDp;
     }
     public List<DockItem> items() { return items; }
     public void setDark(boolean d) { dark = d; }
@@ -27,12 +29,12 @@ public class DockAdapter extends RecyclerView.Adapter<DockAdapter.VH> {
     @NonNull @Override public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         ImageView iv = new ImageView(parent.getContext());
         iv.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-        int w = 40;                                     // 紧凑线性图标，贴近迪友桌面底栏
-        if (viewType == DockItem.TYPE_SPACE_BIG) w = 30;
-        else if (viewType == DockItem.TYPE_SPACE_SMALL) w = 15;
-        else if (viewType == DockItem.TYPE_SPLIT_LINE) w = 10;
-        iv.setLayoutParams(new RecyclerView.LayoutParams((int)(w*density), (int)(30*density)));
-        int px = (int)(7*density), py = (int)(5*density);
+        // 参考迪友桌面：item 宽=栏高、图标 1:1 占栏高 0.8；此处整体放大并把间隔拉开
+        int w = (int)(barHeightDp * 1.35);              // 48dp 栏高 -> 64dp item
+        if (viewType == DockItem.TYPE_SPACE_SMALL) w = w / 2;
+        else if (viewType == DockItem.TYPE_SPLIT_LINE) w = w / 3;
+        iv.setLayoutParams(new RecyclerView.LayoutParams((int)(w*density), (int)(barHeightDp*density)));
+        int px = (int)(w * 0.22 * density), py = (int)(barHeightDp * 0.10 * density);
         iv.setPadding(px, py, px, py);
         return new VH(iv);
     }

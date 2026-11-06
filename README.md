@@ -20,6 +20,9 @@ D:/dev/gradle-home/wrapper/dists/gradle-8.14-all/8mguqc37c200i71ledpgw8n5m/gradl
 - **0.1.2**：底栏改为前台服务（`startForegroundService` + 常驻通知），设置页 `onResume` 自动拉起，解决首次打开只显示设置页、底栏不出现；`PermissionChecker` 与「App 内 ADB 通道」解耦
 - **0.1.2 UI**：底栏改用迪友桌面 `drawable/nav_common_*` 系列线性 vector 图标（`_b_icon` 深色图标 / `_w_icon` 白色图标，共 28 个，自包含、无外部资源依赖），浅色横条 + 紧凑图标，不再显示文字占位；图标资源取自车机上迪友桌面 APK 的 `apktool_out/res/drawable`（自用研究）
 - **0.1.2 深浅模式**：设置页「外观模式」三选一（跟随系统 / 浅色 / 深色）。跟随系统时通过 `Configuration.uiMode & UI_MODE_NIGHT_MASK` 判定，设置页 `onResume` / `onConfigurationChanged` 重建配色，悬浮底栏 `Service.onConfigurationChanged` 即时换背景与图标；默认跟随系统
+- **0.1.3 UI 尺寸**：按迪友桌面比例（栏高=dp_30、图标 1:1 占栏高 0.8、item 宽=栏高）整体放大到默认 **48dp**，item 宽 64dp、图标约 36dp、左右间隔明显拉开；设置页「底栏尺寸」三档 40/48/56dp，切换后底栏立即重建
+- **0.1.3 按钮可用**：去掉常态 `FLAG_NOT_TOUCHABLE`（仅保留 `NOT_TOUCH_MODAL` 让栏外穿透），15 个按钮全部可点。`back/home/menu/lock_screen` 走无障碍 `performGlobalAction(1/2/3/8)`，`settings` 打开设置主页，`ac` 拉起车机空调应用，其余温度/风量/模式/座椅/循环项提供本地状态与 Toast 反馈（S09 换 BYDAutoAcDevice 真实读写）
+- **0.1.3 隐藏原厂栏**：`SystemBarGuard` 改走 `Settings.Global.putString()`（依赖已授予的 `WRITE_SECURE_SETTINGS`），备份原值 → 写回/删键 → 读回复核 → 成功后才清备份；用户另有隐藏方案，此项非当前重点
 
 ## 完整恢复（重要）
 - 设置页常驻「一键恢复原厂导航栏」按钮，与隐藏开关状态无关，随时可点。

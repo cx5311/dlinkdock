@@ -168,6 +168,27 @@ public class SettingsActivity extends android.app.Activity {
         });
         addText("「跟随系统」时，车机切换深浅模式，底栏与设置页会自动同步换色换图标。");
 
+        section("底栏尺寸");
+        RadioGroup hrg = new RadioGroup(this);
+        hrg.setOrientation(RadioGroup.HORIZONTAL);
+        String[] hl = {"小 40dp", "中 48dp", "大 56dp"};
+        final int[] heights = {40, 48, 56};
+        for (int i = 0; i < hl.length; i++) {
+            RadioButton rb = new RadioButton(this);
+            rb.setId(i + 1);
+            rb.setText(hl[i]);
+            rb.setTextColor(ThemeHelper.titleColor(dark));
+            hrg.addView(rb);
+        }
+        int curH = prefs.barHeightDp();
+        hrg.check(curH == 40 ? 1 : (curH == 56 ? 3 : 2));
+        root.addView(hrg);
+        hrg.setOnCheckedChangeListener((group, checkedId) -> {
+            prefs.setBarHeightDp(heights[checkedId - 1]);
+            notifyDockRefresh();
+        });
+        addText("按迪友桌面比例（图标 1:1、占栏高 0.8）整体放大，并拉开图标间隔；切换后底栏立即重建。");
+
         section("2  导航栏显示");
         addSwitch("隐藏原厂导航栏", "通过 ADB 下发 policy_control；改动前自动备份原值",
             prefs.isHideSystemNav(), (btn, on) -> {
@@ -176,7 +197,9 @@ public class SettingsActivity extends android.app.Activity {
                     prefs.setHideSystemNav(ok);
                     if (!ok) {
                         btn.setChecked(false);
-                        adbStatus.setText("隐藏失败：App 内 ADB 授权通道尚未接入（S09），请先用上方 PC 端命令授权");
+                        adbStatus.setText("隐藏失败：缺少 WRITE_SECURE_SETTINGS 或系统拒绝写入；"
+                            + "可用 PC 端命令 " + SystemBarGuard.hideCommand(this)
+                            + "，也可使用你自己的隐藏方案");
                     }
                 } else {
                     doRestore();
@@ -216,7 +239,7 @@ public class SettingsActivity extends android.app.Activity {
         section("5  高级");
         addSwitch("开机自启", "BOOT_COMPLETED / QUICKBOOT_POWERON", true, (btn, on) -> { });
         addText("车型：宋 PLUS DMi 2021 款　控制器：13.6　DiLink 3.0");
-        addText("版本 0.1.2（迪友桌面图标 / 深浅模式 / 前台服务）");
+        addText("版本 0.1.3（迪友图标 / 深浅模式 / 尺寸放大 / 按钮可用）");
     }
 
     /** 通知底栏刷新（项增减、深浅切换、旋转屏后重算）。 */
