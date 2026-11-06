@@ -25,7 +25,8 @@ public final class SystemBarGuard {
     }
 
     public static boolean hide(Context c, DockPrefs p, ShellExecutor sh) {
-        if (!sh.isConnected()) return false;
+        // 关键：canExec()=false 时直接失败，绝不写假备份、绝不假装隐藏成功
+        if (!sh.isConnected() || !sh.canExec()) return false;
         if (!p.hasBackup()) capture(c, p, sh);          // 必须先备份
         String pkg = c.getPackageName();
         String r = sh.exec("settings put global " + KEY_POLICY + " immersive.full=" + pkg + EXEMPT);
@@ -34,7 +35,7 @@ public final class SystemBarGuard {
 
     /** 完整恢复：有原值写回原值，无原值删除键；同时恢复无障碍相关键；最后读回复核。 */
     public static boolean restore(Context c, DockPrefs p, ShellExecutor sh) {
-        if (!sh.isConnected()) return false;
+        if (!sh.isConnected() || !sh.canExec()) return false;
         if (p.hasBackup()) {
             if (p.backupPolicyExisted()) {
                 sh.exec("settings put global " + KEY_POLICY + " " + p.backupPolicyValue());
@@ -46,9 +47,12 @@ public final class SystemBarGuard {
         } else {
             sh.exec("settings delete global " + KEY_POLICY);   // 兜底
         }
-        p.setHideSystemNav(false);
-        p.clearBackup();
-        return verify(sh, p);
+        boolean ok = verify(sh, p);   // 必须在清备份之前读回复核
+        if (ok) {                     // 只有真正恢复成功才清备份，失败保留以便重试
+            p.setHideSystemNav(false);
+            p.clearBackup();
+        }
+        return ok;
     }
 
     /** 复核：恢复后 policy_control 应等于原值或已不存在。 */

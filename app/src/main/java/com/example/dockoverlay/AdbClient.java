@@ -31,8 +31,18 @@ public final class AdbClient implements ShellExecutor {
     public String lastError() { return lastError; }
     public void disconnect() { connected = false; }
     @Override public boolean isConnected() { return connected; }
+
+    /**
+     * S09 之前恒为 false：当前只完成 TCP 端口连通，ADB 协议
+     * CNXN/AUTH/OPEN/WRTE + RSA 公钥认证尚未实现，无法下发任何 shell 命令。
+     * 端口连通 ≠ 已授权，禁止据此判定授权成功。
+     */
+    @Override public boolean canExec() { return false; }
+
     @Override public String exec(String cmd) {
-        // TODO(真机)：通过 AdbStream 打开 shell: 通道并读取输出
-        return connected ? "" : null;
+        // TODO(S09)：通过 AdbStream 打开 shell: 通道并读取输出。
+        // 必须返回 null 表示「命令未执行」。返回空串会被 SystemBarGuard.hide()
+        // 误判为执行成功（r != null），进而假装隐藏成功、写入假备份。
+        return null;
     }
 }

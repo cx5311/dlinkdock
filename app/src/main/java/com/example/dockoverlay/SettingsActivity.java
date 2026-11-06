@@ -1,7 +1,11 @@
 package com.example.dockoverlay;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.text.InputType;
@@ -15,8 +19,20 @@ import android.widget.Switch;
 import android.widget.TextView;
 import java.util.List;
 
-/** App 唯一主页面：设置主页（5 分区，素排版）。第 19 项「设置」即跳转到此。 */
+/** App 唯一主页面：设置主页（素排版）。第 19 项「设置」即跳转到此。 */
 public class SettingsActivity extends android.app.Activity {
+    private static final String PKG = "com.example.dockoverlay";
+
+    /** PC 端一次性授权命令（临时通道；S09 补完 App 内 ADB 协议栈后可不再需要）。 */
+    private static final String PC_GRANT =
+        "adb connect 192.168.186.95:5555\n"
+        + "adb shell pm grant " + PKG + " android.permission.WRITE_SECURE_SETTINGS\n"
+        + "adb shell appops set " + PKG + " SYSTEM_ALERT_WINDOW allow\n"
+        + "adb shell settings get secure enabled_accessibility_services\n"
+        + "adb shell settings put secure enabled_accessibility_services "
+        + PKG + "/.DockAccessibilityService\n"
+        + "adb shell settings put secure accessibility_enabled 1";
+
     private LinearLayout root;
     private DockPrefs prefs;
     private final AdbClient adb = new AdbClient();
@@ -78,6 +94,7 @@ public class SettingsActivity extends android.app.Activity {
         root.addView(t);
         return t;
     }
+
     private void build() {
         section("1  连接与授权");
         final EditText host = new EditText(this);
@@ -99,10 +116,19 @@ public class SettingsActivity extends android.app.Activity {
             }).start();
         });
         adbStatus = addText("");
-        addButton("打开系统无障碍设置", v -> startActivity(
-            new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)));
-        addButton("打开悬浮窗权限设置", v -> startActivity(
-            new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)));
+        addButton("打开系统无障碍设置", v ->
+            openSystemSettings(Settings.ACTION_ACCESSIBILITY_SETTINGS, "无障碍"));
+        addButton("打开悬浮窗权限设置", v -> openOverlaySettings());
+
+        section("1.5  PC 端一次性授权（临时通道）");
+        addText("车机与电脑连同一 WiFi 后，在电脑命令行执行以下命令。权限一次授予、持久生效，之后无需电脑。");
+        addText(PC_GRANT).setTextIsSelectable(true);
+        addButton("复制授权命令", v -> {
+            ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            if (cm != null) cm.setPrimaryClip(ClipData.newPlainText("adb", PC_GRANT));
+            adbStatus.setText("授权命令已复制；粘贴到电脑命令行执行前请先确认车机 IP");
+        });
+        addText("注意：enabled_accessibility_services 原值若非空，须把本服务追加在原值后（用 : 分隔），切勿覆盖车机原有无障碍服务。");
 
         section("2  导航栏显示");
         addSwitch("隐藏原厂导航栏", "通过 ADB 下发 policy_control；改动前自动备份原值",
@@ -110,7 +136,10 @@ public class SettingsActivity extends android.app.Activity {
                 if (on) {
                     boolean ok = SystemBarGuard.hide(this, prefs, adb);
                     prefs.setHideSystemNav(ok);
-                    if (!ok) { btn.setChecked(false); adbStatus.setText("请先连接无线 ADB 再隐藏原厂导航栏"); }
+                    if (!ok) {
+                        btn.setChecked(false);
+                        adbStatus.setText("隐藏失败：App 内 ADB 授权通道尚未接入（S09），请先用上方 PC 端命令授权");
+                    }
                 } else {
                     doRestore();
                 }
@@ -152,12 +181,33 @@ public class SettingsActivity extends android.app.Activity {
         section("5  高级");
         addSwitch("开机自启", "BOOT_COMPLETED / QUICKBOOT_POWERON", true, (btn, on) -> { });
         addText("车型：宋 PLUS DMi 2021 款　控制器：13.6　DiLink 3.0");
-        addText("版本 0.1.0（S08 骨架）");
+        addText("版本 0.1.1（S09 前置修复：ADB 状态诚实化 / 权限页降级 / PC 授权通道）");
     }
+
+    /** 悬浮窗权限页：必须带 package: URI，且车机定制 ROM 可能没有该页面，需降级。 */
+    private void openOverlaySettings() {
+        Intent i = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+            Uri.parse("package:" + getPackageName()));
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            startActivity(i);
+        } catch (Exception e) {
+            adbStatus.setText("车机未提供悬浮窗权限页面；请用上方 PC 端命令授权：appops set "
+                + PKG + " SYSTEM_ALERT_WINDOW allow");
+        }
+    }
+    private void openSystemSettings(String action, String label) {
+        try {
+            startActivity(new Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        } catch (Exception e) {
+            adbStatus.setText("车机未提供「" + label + "」设置页面；请用上方 PC 端命令授权。");
+        }
+    }
+
     private void doRestore() {
         boolean ok = SystemBarGuard.restore(this, prefs, adb);
         if (ok) adbStatus.setText("原厂导航栏已恢复");
-        else adbStatus.setText("恢复未完成：请先连接无线 ADB，或使用 PC 端兜底命令 "
+        else adbStatus.setText("恢复未完成：ADB 授权通道未接入或车机未连接，可用 PC 端兜底命令 "
             + SystemBarGuard.fallbackCommand());
         updateBackupStatus();
     }
@@ -169,6 +219,10 @@ public class SettingsActivity extends android.app.Activity {
             StringBuilder sb = new StringBuilder("未获得全部权限，缺少：");
             for (String m : r.missing) sb.append(m).append("；");
             s = sb.toString();
+        }
+        if (!adb.canExec()) {
+            s += "\n说明：无线 ADB 端口已连通，但 App 内授权通道（ADB 协议握手 + RSA 认证）尚未接入（S09）；"
+               + "端口连通 ≠ 已授权，本按钮暂不会下发任何命令。请先用上方 PC 端命令一次性授权。";
         }
         if (adbStatus != null) adbStatus.setText(s);
     }
