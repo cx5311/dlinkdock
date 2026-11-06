@@ -188,9 +188,10 @@ public class SettingsActivity extends android.app.Activity {
             notifyDockRefresh();
         });
         addText("按迪友桌面比例（图标 1:1、占栏高 0.8）整体放大，并拉开图标间隔；切换后底栏立即重建。");
-        addText("默认贴底。若隐藏原厂栏后其他应用变成全屏、内容被底栏压住，可在电脑执行："
-            + "adb shell wm overscan 0,0,0,72（72 换成实际栏高像素），恢复用 adb shell wm overscan reset。"
-            + "迪友桌面是 HOME 桌面，其内容区是自己的 View（高度=屏高−navigation_bar_height），独立悬浮 App 无法强制第三方应用留 inset。");
+        addText("0.1.5 起底栏用 TYPE_ACCESSIBILITY_OVERLAY 盖在原厂导航栏之上并贴底，触摸不再被原厂栏吃掉。"
+            + "建议保留原厂导航栏（不要设 immersive），这样系统仍给应用内容区保留底部 inset，内容不会被压住；"
+            + "若已设全屏，可在电脑执行 adb shell wm overscan 0,0,0,72（72 换成实际栏高像素），恢复用 wm overscan reset。"
+            + "迪友桌面是 HOME 桌面，内容区是它自己的 View（高度=屏高−navigation_bar_height），独立悬浮 App 无法强制第三方应用留 inset。");
         addSwitch("避开原厂导航栏（底栏上移）",
             "默认关＝贴底；仅当点击被原厂导航栏的输入窗口吃掉时才打开（上移一栏）",
             prefs.barOffsetDp() > 0, (btn, on) -> {
@@ -248,7 +249,7 @@ public class SettingsActivity extends android.app.Activity {
         section("5  高级");
         addSwitch("开机自启", "BOOT_COMPLETED / QUICKBOOT_POWERON", true, (btn, on) -> { });
         addText("车型：宋 PLUS DMi 2021 款　控制器：13.6　DiLink 3.0");
-        addText("版本 0.1.4（贴底 / 温度数字 / 空调面板显式组件）");
+        addText("版本 0.1.5（无障碍浮层贴底 / 温度数字 / 空调面板显式组件）");
     }
 
     /** 通知底栏刷新（项增减、深浅切换、旋转屏后重算）。 */

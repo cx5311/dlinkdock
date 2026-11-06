@@ -45,6 +45,9 @@ public class DockOverlayService extends Service {
         super.onCreate();
         prefs = new DockPrefs(this);
         wm = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
+        // 覆盖安装/车机桌面会清掉我们的无障碍服务，先自行写回（需要已授予 WRITE_SECURE_SETTINGS）
+        boolean accOk = AccessibilityGuard.ensureEnabled(this);
+        Log.d(TAG, "accessibility guard -> " + accOk);
         startAsForeground();   // startForegroundService 后必须尽快调用
     }
 
@@ -98,8 +101,22 @@ public class DockOverlayService extends Service {
         new ItemTouchHelper(new DockDragCallback(adapter, prefs, null)).attachToRecyclerView(rv);
         dockView.setBackgroundColor(ThemeHelper.barBackground(dark));
         WindowManager.LayoutParams p = buildLp(false);
-        wm.addView(dockView, p);
-        Log.d(TAG, "addView OK: items=" + list.size() + " h=" + p.height + " y=" + p.y);
+        try {
+            wm.addView(dockView, p);
+            Log.d(TAG, "addView OK (ACCESSIBILITY_OVERLAY): items=" + list.size()
+                + " h=" + p.height + " y=" + p.y);
+        } catch (Exception e) {
+            // 无障碍服务未启用时 2032 会被 WMS 拒绝，回退到 2038 并上移避让，保证底栏仍可用
+            Log.w(TAG, "2032 denied: " + e.getMessage() + ", fallback 2038 + offset");
+            p.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
+            p.y -= (int)(prefs.barHeightDp() * getResources().getDisplayMetrics().density);
+            try {
+                wm.addView(dockView, p);
+                Log.d(TAG, "fallback addView OK (2038 + offset): y=" + p.y);
+            } catch (Exception e2) {
+                Log.e(TAG, "addView failed: " + e2.getMessage());
+            }
+        }
     }
 
     /**
@@ -120,7 +137,9 @@ public class DockOverlayService extends Service {
 
     private WindowManager.LayoutParams buildLp(boolean edit) {
         WindowManager.LayoutParams p = new WindowManager.LayoutParams();
-        p.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;      // 2038
+        // 2032：层级高于系统导航栏（TYPE_NAVIGATION_BAR），贴底时既能盖住原厂栏、也能收到触摸。
+        // 实测 2038 APPLICATION_OVERLAY 贴底时触摸全部被 NavigationBar0 吃掉。
+        p.type = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
         p.format = PixelFormat.TRANSLUCENT;                                // -3
         p.gravity = Gravity.TOP;                                           // 48，配合 y 贴底
         p.width = WindowManager.LayoutParams.MATCH_PARENT;
